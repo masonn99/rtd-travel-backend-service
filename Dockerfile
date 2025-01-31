@@ -1,31 +1,46 @@
-# Use Node.js LTS version
-FROM node:18-slim
+# Build stage
+FROM node:18-slim AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package.json .
-COPY yarn.lock .
+# Install OpenSSL
+RUN apt-get update -y && \
+    apt-get install -y openssl
+
+# Copy package files and prisma schema first
+COPY package*.json ./
+COPY prisma ./prisma/
 
 # Install dependencies
-RUN yarn install --frozen-lockfile
+RUN npm install
 
-# Copy application code
+# Copy the rest of the application
 COPY . .
 
 # Generate Prisma client
 RUN npx prisma generate
 
 # Build the application
-RUN yarn build
+RUN npm run build
 
-# Clean up development dependencies
-RUN yarn install --production --frozen-lockfile
+# Runtime stage
+FROM node:18-slim
 
-# Expose the port
+WORKDIR /app
+
+# Install OpenSSL in runtime image
+RUN apt-get update -y && \
+    apt-get install -y openssl
+
+# Copy built assets from builder
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/prisma ./prisma
+
 ENV PORT=8080
+ENV NODE_ENV=production
+
 EXPOSE 8080
 
-# Start the application
-CMD [ "yarn", "start" ]
+CMD ["node", "dist/src/main.js"]
