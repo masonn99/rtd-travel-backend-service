@@ -27,20 +27,16 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          # Remove cache option since we don't have a lock file yet
           
-      - name: Clean install dependencies
+      - name: Install dependencies
         run: |
           rm -rf node_modules package-lock.json
+          npm install typescript@5.2.2 --save-dev
+          npm install @types/node@20.6.2 @types/express@4.17.17 @types/cors@2.8.14 --save-dev
           npm install
-          npm install --save-dev @types/express@4.17.17 @types/cors@2.8.14 @types/node@20.6.2
-          npm install typescript@latest
-          npm install -g typescript
           
       - name: Build application
-        run: |
-          tsc --version
-          npm run build
+        run: npm run build
         
       - name: Generate Prisma Client
         run: npx prisma generate
