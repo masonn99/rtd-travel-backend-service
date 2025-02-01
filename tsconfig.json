@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "es2020",
     "module": "commonjs",
+    "lib": ["es2020"],
     "outDir": "./dist",
     "baseUrl": "./",
     "rootDir": "./src",
@@ -9,9 +10,11 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
     "resolveJsonModule": true,
-    // Remove types array and just use typeRoots
-    "typeRoots": ["./node_modules/@types"]
+    "types": ["node"],
+    "typeRoots": ["./node_modules/@types"],
+    "allowJs": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]
