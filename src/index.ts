@@ -30,11 +30,39 @@ const limiter = rateLimit({
 });
 
 app.use(limiter);
-app.use(cors({
-  origin: ['http://localhost:5173', process.env.FRONTEND_URL || ''],
-  methods: ['GET', 'POST'],
-  credentials: true
-}));
+
+// Add debug logging for environment variables
+console.log('Frontend URL:', process.env.FRONTEND_URL);
+console.log('Node ENV:', process.env.NODE_ENV);
+
+const corsOptions = {
+  origin: function(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      process.env.FRONTEND_URL
+    ].filter(Boolean); // Remove falsy values
+    
+    console.log('Incoming request origin:', origin);
+    console.log('Allowed origins:', allowedOrigins);
+
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      console.log('Blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Serve static frontend files
