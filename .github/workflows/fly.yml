@@ -26,25 +26,29 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '18.x'
           cache: 'npm'
           
-      - name: Setup npm
+      - name: Configure npm
         run: |
+          npm set progress=false
           npm config set legacy-peer-deps true
           npm config set fetch-retry-maxtimeout 600000
+          mkdir -p ~/.npm
+          sudo chown -R $USER:$GROUP ~/.npm
+          
+      - name: Clean npm cache
+        run: npm cache clean --force || true
           
       - name: Install dependencies
         run: |
-          npm cache clean --force
-          npm install -g typescript@5.2.2
-          npm install --no-package-lock
+          npm ci || npm install --no-package-lock
         env:
           NODE_ENV: development
           
       - name: Install types
         run: |
-          npm install --save-dev @types/node@20.6.2 @types/express@4.17.17 @types/cors@2.8.14
+          npm install --save-dev @types/node@20.6.2 @types/express@4.17.17 @types/cors@2.8.14 || true
           
       - name: Build application
         run: npm run build
