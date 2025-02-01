@@ -54,43 +54,61 @@ const corsOptions = {
     console.log('Raw FRONTEND_URL:', process.env.FRONTEND_URL);
 
     // Define allowed origins
-    const allowedOrigins = [
+    const allowedOrigins = new Set([
       'http://localhost:5173',
       'http://localhost:3000',
       'https://rtd-travel-check.vercel.app'
-    ];
-
-    // Add Vercel preview deployments pattern
-    const vercelPreviewPattern = /^https:\/\/rtd-travel-check-.*\.vercel\.app$/;
+    ]);
 
     // Add configured frontend URL if it's valid
-    if (process.env.FRONTEND_URL && process.env.FRONTEND_URL.startsWith('http')) {
-      const url = new URL(process.env.FRONTEND_URL);
-      allowedOrigins.push(url.origin);
+    try {
+      if (process.env.FRONTEND_URL) {
+        const url = new URL(process.env.FRONTEND_URL);
+        allowedOrigins.add(url.origin);
+      }
+    } catch (error) {
+      console.error('Invalid FRONTEND_URL:', process.env.FRONTEND_URL);
     }
 
-    console.log('Final allowed origins:', allowedOrigins);
-    
-    // Always allow requests with no origin (like mobile apps, Postman, or curl requests)
+    const origins = Array.from(allowedOrigins);
+    console.log('Final allowed origins:', origins);
+
+    // For preflight requests and direct API calls
     if (!origin) {
-      console.log('No origin provided (probably a preflight request) - allowing');
+      console.log('No origin - direct request or preflight');
       return callback(null, true);
     }
 
-    // Check if origin matches any allowed origins or Vercel preview pattern
-    if (allowedOrigins.includes(origin) || vercelPreviewPattern.test(origin)) {
-      console.log('Origin allowed:', origin);
+    // For browser requests
+    const isAllowed = origins.includes(origin) || 
+                     origin.match(/^https:\/\/rtd-travel-check(-[a-zA-Z0-9]+)?\.vercel\.app$/);
+
+    if (isAllowed) {
+      console.log('Origin explicitly allowed:', origin);
       callback(null, true);
     } else {
-      console.log('Origin blocked:', origin);
+      console.log('Origin explicitly blocked:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
-  optionsSuccessStatus: 204
+  exposedHeaders: ['Access-Control-Allow-Origin'],
+  maxAge: 86400, // 24 hours in seconds
+  optionsSuccessStatus: 204,
+  preflightContinue: false
 };
+
+app.use((req, res, next) => {
+  console.log('Incoming request:', {
+    method: req.method,
+    path: req.path,
+    origin: req.headers.origin,
+    referer: req.headers.referer
+  });
+  next();
+});
 
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -206,7 +224,6 @@ prisma.$connect()
     app.listen(port, () => {
       console.log(`Server running at http://localhost:${port}`);
       console.log('Environment:', process.env.NODE_ENV);
-      console.log('Database URL:', process.env.DATABASE_URL?.split('?')[0]); // Log DB URL without credentials
     });
   })
   .catch((error) => {
