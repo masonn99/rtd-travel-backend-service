@@ -37,14 +37,21 @@ jobs:
           mkdir -p ~/.npm
           sudo chown -R $USER:$GROUP ~/.npm
           
-      - name: Clean npm cache
-        run: npm cache clean --force || true
+      - name: Install Prisma CLI
+        run: npm install -g prisma
+          
+      - name: Generate Prisma Client
+        run: |
+          npx prisma generate --schema=./prisma/schema.prisma
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           
       - name: Install dependencies
         run: |
           npm ci || npm install --no-package-lock
         env:
           NODE_ENV: development
+          PRISMA_SCHEMA_PATH: ./prisma/schema.prisma
           
       - name: Install types
         run: |
@@ -53,11 +60,6 @@ jobs:
       - name: Build application
         run: npm run build
         
-      - name: Generate Prisma Client
-        run: npx prisma generate
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          
       - name: Run tests
         run: npm test || true
         env:
