@@ -43,20 +43,24 @@ jobs:
           npm install --save-dev typescript @types/node@20.6.2 @types/express@4.17.17 @types/cors@2.8.14
           
       - name: Install Prisma CLI
-        run: npm install -g prisma
+        run: |
+          npm install prisma --save-dev
+          npm install @prisma/client
           
       - name: Generate Prisma Client
         run: |
+          echo "DATABASE_URL=\"$DATABASE_URL\"" > .env
           npx prisma generate --schema=./prisma/schema.prisma
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           
       - name: Install dependencies
         run: |
-          npm ci || npm install --no-package-lock
+          npm install --no-package-lock --ignore-scripts
+          npx prisma generate --schema=./prisma/schema.prisma
         env:
           NODE_ENV: development
-          PRISMA_SCHEMA_PATH: ./prisma/schema.prisma
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           
       - name: Build application
         run: npm run build

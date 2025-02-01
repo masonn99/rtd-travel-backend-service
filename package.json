@@ -7,7 +7,8 @@
     "prebuild": "rm -rf dist",
     "build": "tsc",
     "start": "node dist/index.js",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate --schema=./prisma/schema.prisma",
+    "prisma:generate": "prisma generate --schema=./prisma/schema.prisma"
   },
   "dependencies": {
     "@prisma/client": "^5.3.1",
@@ -29,5 +30,8 @@
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
+  },
+  "prisma": {
+    "schema": "./prisma/schema.prisma"
   }
 }
