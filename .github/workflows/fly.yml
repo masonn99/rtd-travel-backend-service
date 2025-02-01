@@ -31,13 +31,9 @@ jobs:
           
       - name: Clean install dependencies
         run: |
-          npm cache clean --force
+          rm -rf node_modules package-lock.json
           npm install
-          npm install --save-dev @types/express @types/cors @types/node @types/dotenv
-          git add package-lock.json
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "GitHub Actions"
-          git commit -m "Add package-lock.json [skip ci]" || true
+          npm install --save-dev @types/express@4.17.17 @types/cors@2.8.14 @types/node@20.6.2
           
       - name: Build application
         run: npm run build
