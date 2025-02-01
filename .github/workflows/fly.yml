@@ -37,6 +37,11 @@ jobs:
           mkdir -p ~/.npm
           sudo chown -R $USER:$GROUP ~/.npm
           
+      - name: Install TypeScript and types
+        run: |
+          npm install -g typescript
+          npm install --save-dev typescript @types/node@20.6.2 @types/express@4.17.17 @types/cors@2.8.14
+          
       - name: Install Prisma CLI
         run: npm install -g prisma
           
@@ -52,10 +57,6 @@ jobs:
         env:
           NODE_ENV: development
           PRISMA_SCHEMA_PATH: ./prisma/schema.prisma
-          
-      - name: Install types
-        run: |
-          npm install --save-dev @types/node@20.6.2 @types/express@4.17.17 @types/cors@2.8.14 || true
           
       - name: Build application
         run: npm run build
