@@ -7,6 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Add your models here
+
 model CountryExperience {
   id        Int      @id @default(autoincrement())
   country   String

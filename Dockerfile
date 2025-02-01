@@ -3,7 +3,7 @@ FROM node:18-slim AS builder
 
 WORKDIR /app
 
-# Install OpenSSL
+# Install OpenSSL and necessary build tools
 RUN apt-get update -y && \
     apt-get install -y openssl
 
@@ -11,16 +11,14 @@ RUN apt-get update -y && \
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm install
+# Install dependencies with exact versions and include dev dependencies
+RUN npm install --production=false
 
 # Copy the rest of the application
 COPY . .
 
-# Generate Prisma client
+# Generate Prisma client and build
 RUN npx prisma generate
-
-# Build the application
 RUN npm run build
 
 # Runtime stage
@@ -32,7 +30,7 @@ WORKDIR /app
 RUN apt-get update -y && \
     apt-get install -y openssl
 
-# Copy built assets from builder
+# Copy only necessary files from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
@@ -43,4 +41,5 @@ ENV NODE_ENV=production
 
 EXPOSE 8080
 
-CMD ["node", "dist/src/main.js"]
+# Update the CMD to point to the correct entry file
+CMD ["node", "dist/index.js"]

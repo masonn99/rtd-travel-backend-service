@@ -4,7 +4,8 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "ts-node-dev src/index.ts",
-    "build": "tsc && npx prisma generate",
+    "prebuild": "rm -rf dist",
+    "build": "tsc",
     "start": "node dist/index.js",
     "postinstall": "prisma generate"
   },
@@ -15,7 +16,11 @@
     "express": "^4.18.2",
     "express-rate-limit": "^6.11.2",
     "express-validator": "^7.2.1",
-    "helmet": "^7.2.0"
+    "helmet": "^7.2.0",
+    "@nestjs/cli": "^10.0.0",
+    "@nestjs/core": "^10.0.0",
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/platform-express": "^10.0.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.14",
@@ -23,6 +28,8 @@
     "@types/node": "^20.6.2",
     "prisma": "^5.3.1",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "@nestjs/schematics": "^10.0.0",
+    "@nestjs/testing": "^10.0.0"
   }
 }
