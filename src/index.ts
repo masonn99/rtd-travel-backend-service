@@ -49,49 +49,47 @@ console.log('Node ENV:', process.env.NODE_ENV);
 
 const corsOptions = {
   origin: function(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-    // Clean up the frontend URL (remove trailing slash and any paths)
-    const frontendUrl = (process.env.FRONTEND_URL || 'https://rtd-travel-check.vercel.app')
-      .replace(/\/$/, '')           // remove trailing slash
-      .replace(/\/.*$/, '');        // remove any paths
+    console.log('==== CORS Debug ====');
+    console.log('Raw request origin:', origin);
+    console.log('Raw FRONTEND_URL:', process.env.FRONTEND_URL);
 
+    // Define allowed origins
     const allowedOrigins = [
       'http://localhost:5173',
       'http://localhost:3000',
-      frontendUrl,
-      'https://rtd-travel-check.vercel.app',
-      // Add preview deployments
-      /^https:\/\/rtd-travel-check-.*\.vercel\.app$/
-    ].filter(Boolean);
+      'https://rtd-travel-check.vercel.app'
+    ];
+
+    // Add Vercel preview deployments pattern
+    const vercelPreviewPattern = /^https:\/\/rtd-travel-check-.*\.vercel\.app$/;
+
+    // Add configured frontend URL if it's valid
+    if (process.env.FRONTEND_URL && process.env.FRONTEND_URL.startsWith('http')) {
+      const url = new URL(process.env.FRONTEND_URL);
+      allowedOrigins.push(url.origin);
+    }
+
+    console.log('Final allowed origins:', allowedOrigins);
     
-    console.log('==== CORS Debug ====');
-    console.log('Request origin:', origin);
-    console.log('Cleaned frontend URL:', frontendUrl);
-    console.log('Allowed origins:', allowedOrigins);
-    
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Always allow requests with no origin (like mobile apps, Postman, or curl requests)
     if (!origin) {
-      console.log('No origin - allowing request');
+      console.log('No origin provided (probably a preflight request) - allowing');
       return callback(null, true);
     }
 
-    const isAllowed = allowedOrigins.some(allowedOrigin => {
-      if (allowedOrigin instanceof RegExp) {
-        return allowedOrigin.test(origin);
-      }
-      return allowedOrigin === origin;
-    });
-
-    if (isAllowed) {
+    // Check if origin matches any allowed origins or Vercel preview pattern
+    if (allowedOrigins.includes(origin) || vercelPreviewPattern.test(origin)) {
       console.log('Origin allowed:', origin);
       callback(null, true);
     } else {
       console.log('Origin blocked:', origin);
-      callback(new Error(`CORS error: ${origin} not allowed`));
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
+  optionsSuccessStatus: 204
 };
 
 app.use(cors(corsOptions));
