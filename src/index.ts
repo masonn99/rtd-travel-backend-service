@@ -9,6 +9,18 @@ import { experienceValidation } from './middleware/validate';
 
 dotenv.config();
 
+// Add these debug logs right after dotenv.config()
+console.log('==== Environment Variables ====');
+console.log('Frontend URL:', process.env.FRONTEND_URL);
+console.log('Node ENV:', process.env.NODE_ENV);
+console.log('Port:', process.env.PORT);
+console.log('============================');
+
+// Add this debug log at the start after dotenv.config()
+console.log('==== Initial Environment Check ====');
+console.log('FRONTEND_URL from env:', process.env.FRONTEND_URL);
+console.log('===============================');
+
 const app = express();
 const prisma = new PrismaClient();
 const port = process.env.PORT || 3000;
@@ -37,29 +49,49 @@ console.log('Node ENV:', process.env.NODE_ENV);
 
 const corsOptions = {
   origin: function(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    // Clean up the frontend URL (remove trailing slash and any paths)
+    const frontendUrl = (process.env.FRONTEND_URL || 'https://rtd-travel-check.vercel.app')
+      .replace(/\/$/, '')           // remove trailing slash
+      .replace(/\/.*$/, '');        // remove any paths
+
     const allowedOrigins = [
       'http://localhost:5173',
       'http://localhost:3000',
-      process.env.FRONTEND_URL
-    ].filter(Boolean); // Remove falsy values
+      frontendUrl,
+      'https://rtd-travel-check.vercel.app',
+      // Add preview deployments
+      /^https:\/\/rtd-travel-check-.*\.vercel\.app$/
+    ].filter(Boolean);
     
-    console.log('Incoming request origin:', origin);
+    console.log('==== CORS Debug ====');
+    console.log('Request origin:', origin);
+    console.log('Cleaned frontend URL:', frontendUrl);
     console.log('Allowed origins:', allowedOrigins);
-
+    
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
+      console.log('No origin - allowing request');
       return callback(null, true);
     }
 
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(origin);
+      }
+      return allowedOrigin === origin;
+    });
+
+    if (isAllowed) {
+      console.log('Origin allowed:', origin);
       callback(null, true);
     } else {
-      console.log('Blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+      console.log('Origin blocked:', origin);
+      callback(new Error(`CORS error: ${origin} not allowed`));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 app.use(cors(corsOptions));
