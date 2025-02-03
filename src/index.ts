@@ -49,63 +49,69 @@ console.log('Node ENV:', process.env.NODE_ENV);
 
 const corsOptions = {
   origin: function(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-    console.log('==== CORS Debug ====');
-    console.log('Raw request origin:', origin);
-    console.log('Raw FRONTEND_URL:', process.env.FRONTEND_URL);
+    console.log('==== CORS Request Debug ====');
+    console.log('Request origin:', origin);
+    console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+
+    // Always allow in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Development mode - allowing all origins');
+      return callback(null, true);
+    }
 
     // Define allowed origins
     const allowedOrigins = new Set([
       'http://localhost:5173',
       'http://localhost:3000',
-      'https://rtd-travel-check.vercel.app'
-    ]);
+      'https://rtd-travel-check.vercel.app',
+      process.env.FRONTEND_URL
+    ].filter(Boolean));
 
-    // Add configured frontend URL if it's valid
-    try {
-      if (process.env.FRONTEND_URL) {
-        const url = new URL(process.env.FRONTEND_URL);
-        allowedOrigins.add(url.origin);
-      }
-    } catch (error) {
-      console.error('Invalid FRONTEND_URL:', process.env.FRONTEND_URL);
-    }
+    console.log('Allowed origins:', Array.from(allowedOrigins));
 
-    const origins = Array.from(allowedOrigins);
-    console.log('Final allowed origins:', origins);
-
-    // For preflight requests and direct API calls
+    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
-      console.log('No origin - direct request or preflight');
+      console.log('No origin - allowing request');
       return callback(null, true);
     }
 
-    // For browser requests
-    const isAllowed = origins.includes(origin) || 
-                     origin.match(/^https:\/\/rtd-travel-check(-[a-zA-Z0-9]+)?\.vercel\.app$/);
-
-    if (isAllowed) {
-      console.log('Origin explicitly allowed:', origin);
-      callback(null, true);
-    } else {
-      console.log('Origin explicitly blocked:', origin);
-      callback(new Error('Not allowed by CORS'));
+    // Check if origin matches Vercel deployment pattern
+    const isVercelDeployment = origin.match(/^https:\/\/rtd-travel-check(-[a-zA-Z0-9-]+)?\.vercel\.app$/);
+    
+    if (isVercelDeployment) {
+      console.log('Vercel deployment detected - allowing origin');
+      return callback(null, true);
     }
+
+    if (allowedOrigins.has(origin)) {
+      console.log('Origin matched allowlist');
+      return callback(null, true);
+    }
+
+    console.log('Origin rejected:', origin);
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-Requested-With'],
   exposedHeaders: ['Access-Control-Allow-Origin'],
-  maxAge: 86400, // 24 hours in seconds
-  optionsSuccessStatus: 204,
-  preflightContinue: false
+  maxAge: 86400,
+  optionsSuccessStatus: 204
 };
 
+// Add more detailed request logging middleware
 app.use((req, res, next) => {
-  console.log('Incoming request:', {
+  console.log('==== Incoming Request Debug ====');
+  console.log({
+    timestamp: new Date().toISOString(),
     method: req.method,
     path: req.path,
     origin: req.headers.origin,
-    referer: req.headers.referer
+    referer: req.headers.referer,
+    'user-agent': req.headers['user-agent'],
+    'content-type': req.headers['content-type'],
+    body: req.method === 'POST' ? JSON.stringify(req.body) : undefined
   });
   next();
 });
@@ -181,10 +187,17 @@ app.get('/api/countries/:name/experiences', async (req: Request, res: Response) 
 app.post('/api/countries/:name/experiences', experienceValidation, async (req: Request, res: Response) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.log('Validation errors:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
 
   try {
+    console.log('Creating new experience:', {
+      country: req.params.name,
+      name: req.body.name,
+      content: req.body.content
+    });
+
     const experience = await prisma.countryExperience.create({
       data: {
         country: req.params.name,
@@ -192,9 +205,15 @@ app.post('/api/countries/:name/experiences', experienceValidation, async (req: R
         content: req.body.content
       }
     });
+    
+    console.log('Experience created successfully:', experience);
     res.json(experience);
   } catch (error) {
-    res.status(500).json({ error: 'Error creating experience' });
+    console.error('Error creating experience:', error);
+    res.status(500).json({ 
+      error: 'Error creating experience',
+      details: process.env.NODE_ENV === 'development' ? error : undefined
+    });
   }
 });
 
@@ -226,7 +245,7 @@ prisma.$connect()
       console.log('Environment:', process.env.NODE_ENV);
     });
   })
-  .catch((error) => {
+  .catch((error: unknown) => {
     console.error('Failed to connect to database:', error);
     process.exit(1);
   });
