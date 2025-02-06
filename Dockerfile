@@ -14,6 +14,10 @@ COPY prisma ./prisma/
 # Install dependencies with exact versions and include dev dependencies
 RUN npm install --production=false
 
+# Explicitly generate Prisma client with a dummy DATABASE_URL
+ENV DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy?schema=public"
+RUN npx prisma generate
+
 # Copy remaining source files and build
 COPY . .
 RUN npm run build
