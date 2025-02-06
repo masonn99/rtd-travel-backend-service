@@ -9,13 +9,12 @@ RUN apt-get update -y && \
 
 # Copy package files and prisma schema first
 COPY package*.json ./
+COPY prisma ./prisma/
 
 # Install dependencies with exact versions and include dev dependencies
 RUN npm install --production=false
 
-# Generate Prisma client and build
-COPY prisma ./prisma/
-RUN npx prisma generate
+# Copy remaining source files and build
 COPY . .
 RUN npm run build
 
